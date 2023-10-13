@@ -7,6 +7,7 @@ import 'package:google_api_headers/google_api_headers.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:http/http.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 class PlacesAutocompleteWidget extends StatefulWidget {
   final String apiKey;
@@ -29,7 +30,6 @@ class PlacesAutocompleteWidget extends StatefulWidget {
   final InputDecoration? decoration;
   final TextStyle? textStyle;
   final ThemeData? themeData;
-  final FocusNode? focusNode;
 
   /// optional - sets 'proxy' value in google_maps_webservice
   ///
@@ -74,7 +74,6 @@ class PlacesAutocompleteWidget extends StatefulWidget {
     this.textStyle,
     this.themeData,
     this.resultTextStyle,
-    this.focusNode,
   }) : super(key: key);
 
   @override
@@ -95,7 +94,6 @@ class _PlacesAutocompleteOverlayState extends PlacesAutocompleteState {
             title: AppBarPlacesAutoCompleteTextField(
               textDecoration: widget.decoration,
               textStyle: widget.textStyle,
-              focusNode: widget.focusNode,
             ),
           ),
           body: PlacesAutocompleteResult(
@@ -211,7 +209,6 @@ class _PlacesAutocompleteOverlayState extends PlacesAutocompleteState {
 
   Widget _textField(BuildContext context) => TextField(
         controller: _queryTextController,
-        focusNode: widget.focusNode,
         autofocus: true,
         style: widget.textStyle ??
             TextStyle(
@@ -523,33 +520,32 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
 }
 
 class PlacesAutocomplete {
-  static Future<Prediction?> show({
-    required BuildContext context,
-    required String apiKey,
-    Mode mode = Mode.fullscreen,
-    String hint = "Search",
-    BorderRadius? overlayBorderRadius,
-    num? offset,
-    Location? location,
-    num? radius,
-    String? language,
-    String? sessionToken,
-    List<String>? types,
-    List<Component>? components,
-    bool? strictbounds,
-    String? region,
-    Widget? logo,
-    ValueChanged<PlacesAutocompleteResponse>? onError,
-    String? proxyBaseUrl,
-    Client? httpClient,
-    InputDecoration? decoration,
-    String startText = "",
-    Duration transitionDuration = const Duration(seconds: 300),
-    TextStyle? textStyle,
-    ThemeData? themeData,
-    TextStyle? resultTextStyle,
-    FocusNode? focusNode,
-  }) {
+  static Future<Prediction?> show(
+      {required BuildContext context,
+      required String apiKey,
+      Mode mode = Mode.fullscreen,
+      String hint = "Search",
+      BorderRadius? overlayBorderRadius,
+      num? offset,
+      Location? location,
+      num? radius,
+      String? language,
+      String? sessionToken,
+      List<String>? types,
+      List<Component>? components,
+      bool? strictbounds,
+      String? region,
+      Widget? logo,
+      ValueChanged<PlacesAutocompleteResponse>? onError,
+      String? proxyBaseUrl,
+      Client? httpClient,
+      InputDecoration? decoration,
+      String startText = "",
+      Duration transitionDuration = const Duration(seconds: 300),
+      TextStyle? textStyle,
+      ThemeData? themeData,
+      TextStyle? resultTextStyle,
+      void Function(VisibilityInfo)? onWidgetVisibilityChanged}) {
     final autoCompleteWidget = PlacesAutocompleteWidget(
       apiKey: apiKey,
       mode: mode,
@@ -573,13 +569,17 @@ class PlacesAutocomplete {
       textStyle: textStyle,
       themeData: themeData,
       resultTextStyle: resultTextStyle,
-      focusNode: focusNode,
     );
 
     if (mode == Mode.overlay) {
       return showDialog(
         context: context,
-        builder: (BuildContext ctx) => autoCompleteWidget,
+        builder: (BuildContext ctx) => VisibilityDetector(
+            key: const Key("flutter_google_places_dialog"),
+            child: autoCompleteWidget,
+            onVisibilityChanged: (VisibilityInfo info) {
+              onWidgetVisibilityChanged?.call(info);
+            }),
       );
     } else {
       return Navigator.push(
